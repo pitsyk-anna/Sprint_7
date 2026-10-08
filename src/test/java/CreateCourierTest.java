@@ -9,13 +9,15 @@ import org.junit.Before;
 import org.junit.Test;
 import steps.CourierSteps;
 import static org.hamcrest.Matchers.equalTo;
+import static org.apache.http.HttpStatus.*;
 
 public class CreateCourierTest  extends BaseApiTest {
     private CourierSteps courierSteps;
     private String login;
     private String password;
     private String firstName;
-    private Integer courierId = null;
+    private CourierModel courier;
+    private CourierLoginModel loginModel;
 
     @Before
     public void createTest() {
@@ -23,12 +25,16 @@ public class CreateCourierTest  extends BaseApiTest {
         login = CourierData.getUniqueLogin();
         password = CourierData.getPassword();
         firstName = CourierData.getFirstName();
-        courierId = null;
+        courier = new CourierModel(login, password, firstName);
+        loginModel = new CourierLoginModel(login, password);
     }
 
     @After
     public void cleanUp() {
-        if (courierId != null) {
+        Response loginResponse = courierSteps.loginCourier(loginModel);
+
+        if (loginResponse.statusCode() == SC_OK) {
+            int courierId = loginResponse.jsonPath().getInt("id");
             courierSteps.deleteCourier(courierId);
         }
     }
@@ -37,40 +43,25 @@ public class CreateCourierTest  extends BaseApiTest {
     @DisplayName("Создание курьера")
     @Description("Проверка, что курьера можно создать")
     public void createNewCourier() {
-
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-
         Response response = courierSteps.createCourier(courier);
         response.then()
-                .statusCode(201)
+                .statusCode(SC_CREATED)
                 .body("ok", equalTo(true));
-        courierId = courierSteps
-                .loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
     }
 
     @Test
     @DisplayName("Создание двух одинаковых курьеров")
     @Description("Проверка, что нельзя создать курьеров с одинаковыми логинами")
     public void createTwoIdenticalLogin() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login,password);
-
         courierSteps.createCourier(courier)
                 .then()
-                .statusCode(201)
+                .statusCode(SC_CREATED)
                 .body("ok", equalTo(true));
 
         courierSteps.createCourier(courier)
                 .then()
-                .statusCode(409)
+                .statusCode(SC_CONFLICT)
                 .body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
-
-        courierId = courierSteps.loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
     }
 
     @Test
@@ -81,7 +72,7 @@ public class CreateCourierTest  extends BaseApiTest {
 
                 courierSteps.createCourier(courier)
                         .then()
-                        .statusCode(400)
+                        .statusCode(SC_BAD_REQUEST)
                         .body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
 
@@ -93,7 +84,7 @@ public class CreateCourierTest  extends BaseApiTest {
 
                 courierSteps.createCourier(courier)
                         .then()
-                        .statusCode(400)
+                        .statusCode(SC_BAD_REQUEST)
                         .body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
 }

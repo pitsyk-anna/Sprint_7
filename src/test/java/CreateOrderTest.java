@@ -10,6 +10,7 @@ import org.junit.runners.Parameterized;
 import steps.OrderSteps;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.List;
+import static org.apache.http.HttpStatus.*;
 
 
 @RunWith(Parameterized.class)
@@ -45,7 +46,7 @@ public class CreateOrderTest  extends BaseApiTest {
         Response response = orderSteps.createOrder(order);
 
         response.then()
-                .statusCode(201)
+                .statusCode(SC_CREATED)
                 .body("track", notNullValue());
     }
 }

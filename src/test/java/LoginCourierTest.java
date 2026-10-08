@@ -8,6 +8,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import steps.CourierSteps;
+import static org.apache.http.HttpStatus.*;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 
@@ -17,6 +18,8 @@ public class LoginCourierTest extends BaseApiTest {
     private String password;
     private String firstName;
     private Integer courierId = null;
+    private CourierModel courier;
+    private CourierLoginModel loginModel;
 
     @Before
     public void loginTest() {
@@ -24,7 +27,21 @@ public class LoginCourierTest extends BaseApiTest {
         login = CourierData.getUniqueLogin();
         password = CourierData.getPassword();
         firstName = CourierData.getFirstName();
-        courierId = null;
+
+        courier = new CourierModel(login, password, firstName);
+        loginModel = new CourierLoginModel(login, password);
+
+        //создание курьера
+        courierSteps.createCourier(courier)
+                .then()
+                .statusCode(SC_CREATED)
+                .body("ok", equalTo(true));
+
+        //получить id для удаления
+        courierId = courierSteps
+                .loginCourier(loginModel)
+                .jsonPath()
+                .getInt("id");
 
     }
 
@@ -39,23 +56,10 @@ public class LoginCourierTest extends BaseApiTest {
     @DisplayName("Залогин курьера")
     @Description("Проверка, что курьер может залогиниться с валидными данными")
     public void loginCourier() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-        // создаём курьера
-        courierSteps.createCourier(courier)
-                .then()
-                .statusCode(201)
-                .body("ok", equalTo(true));
-
-        // получаем id
-        courierId = courierSteps
-                .loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
         Response response = courierSteps.loginCourier(loginModel);
         int id = response.jsonPath().getInt("id");
         response.then()
-                .statusCode(200)
+                .statusCode(SC_OK)
                 .body("id", equalTo(id));
     }
 
@@ -64,21 +68,9 @@ public class LoginCourierTest extends BaseApiTest {
     @DisplayName("Авторизация без логина")
     @Description("Проверка невозможности авторизации без логина")
     public void loginCourierNoLogin() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-
-        courierSteps.createCourier(courier)
-                .then()
-                .statusCode(201)
-                .body("ok", equalTo(true));
-
-        courierId = courierSteps.loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
-
         Response response = courierSteps.loginCourier(new CourierLoginModel("", password));
         response.then()
-                .statusCode(400)
+                .statusCode(SC_BAD_REQUEST)
                 .body("message", equalTo("Недостаточно данных для входа"));
     }
 
@@ -86,21 +78,9 @@ public class LoginCourierTest extends BaseApiTest {
     @DisplayName("Авторизация без пароля")
     @Description("Проверка невозможности авторизации без пароля")
     public void loginCourierNoPassword() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-
-        courierSteps.createCourier(courier)
-                .then()
-                .statusCode(201)
-                .body("ok", equalTo(true));
-
-        courierId = courierSteps.loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
-
         Response response = courierSteps.loginCourier(new CourierLoginModel(login, ""));
         response.then()
-                .statusCode(400)
+                .statusCode(SC_BAD_REQUEST)
                 .body("message", equalTo("Недостаточно данных для входа"));
     }
 
@@ -108,42 +88,18 @@ public class LoginCourierTest extends BaseApiTest {
     @DisplayName("Авторизация с неверным логином")
     @Description("Проверка невозможности авторизации с неверным логином")
     public void loginCourierIncorrectLogin() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-
-        courierSteps.createCourier(courier)
-                .then()
-                .statusCode(201)
-                .body("ok", equalTo(true));
-
-        courierId = courierSteps.loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
-
         Response response = courierSteps.loginCourier(new CourierLoginModel("incorrect_" + login, password));
         response.then()
-                .statusCode(404)
+                .statusCode(SC_NOT_FOUND)
                 .body("message", equalTo("Учетная запись не найдена"));
     }
     @Test
     @DisplayName("Авторизация с неверным паролем")
     @Description("Проверка невозможности авторизации с неверным паролем")
     public void loginCourierIncorrectPassword() {
-        CourierModel courier = new CourierModel(login, password, firstName);
-        CourierLoginModel loginModel = new CourierLoginModel(login, password);
-
-        courierSteps.createCourier(courier)
-                .then()
-                .statusCode(201)
-                .body("ok", equalTo(true));
-
-        courierId = courierSteps.loginCourier(loginModel)
-                .jsonPath()
-                .getInt("id");
-
         Response response = courierSteps.loginCourier(new CourierLoginModel(login, "incorrect_password"));
         response.then()
-                .statusCode(404)
+                .statusCode(SC_NOT_FOUND)
                 .body("message", equalTo("Учетная запись не найдена"));
     }
     @Test
@@ -154,7 +110,7 @@ public class LoginCourierTest extends BaseApiTest {
         String fakePassword = CourierData.getPassword();
         Response response = courierSteps.loginCourier(new CourierLoginModel(fakeLogin, fakePassword));
         response.then()
-                .statusCode(404)
+                .statusCode(SC_NOT_FOUND)
                 .body("message", equalTo("Учетная запись не найдена"));
     }
 }

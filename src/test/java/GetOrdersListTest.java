@@ -4,7 +4,7 @@ import io.restassured.response.Response;
 import org.junit.Before;
 import org.junit.Test;
 import steps.OrderSteps;
-
+import static org.apache.http.HttpStatus.*;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class GetOrdersListTest extends BaseApiTest {
@@ -23,7 +23,7 @@ public class GetOrdersListTest extends BaseApiTest {
         Response response = orderSteps.getOrderList();
 
         response.then()
-                .statusCode(200)
+                .statusCode(SC_OK)
                 .body("orders", notNullValue());
     }
 }
